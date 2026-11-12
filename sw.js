@@ -1,7 +1,7 @@
 // オフライン対応：ネットワーク優先、失敗時はキャッシュ
-const CACHE = 'senro-study-v2';
+const CACHE = 'senro-study-v3';
 const FILES = ['./', 'index.html', 'style.css', 'manifest.json', 'icon.svg', 'icon-192.png',
-  'js/questions.js', 'js/questions2.js', 'js/glossary.js', 'js/lessons.js', 'js/notes.js', 'js/plan.js', 'js/calc.js', 'js/app.js'];
+  'js/questions.js', 'js/questions2.js', 'js/glossary.js', 'js/lessons.js', 'js/themes.js', 'js/notes.js', 'js/plan.js', 'js/calc.js', 'js/app.js'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
 });

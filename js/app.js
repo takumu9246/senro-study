@@ -147,6 +147,8 @@ function renderHome() {
     <div class="btns"><a class="btn primary" href="#lesson/${nl.id}">読んで問題を解く</a><a class="btn" href="#lessons">レッスン一覧</a></div>
   </section>` : `<section class="card focus"><h3>全レッスン完了 🎉</h3><p>「問題」の苦手モード・過去問類題と計算ドリルで仕上げましょう。</p><a class="btn primary" href="#quiz">問題へ</a></section>`}
 
+  ${partsSummaryCard()}
+
   <section class="card">
     <h2>勉強の進め方</h2>
     <ol class="howto">
@@ -337,7 +339,8 @@ function renderQuestion() {
     <div id="feedback"></div>
   </section>`;
   $('#quit').addEventListener('click', () => {
-    const lid = quiz.lesson; quiz = null;
+    const lid = quiz.lesson, theme = quiz.mode === 'theme'; quiz = null;
+    if (theme) { location.hash = '#stats'; go(); return; }
     lid ? renderLesson(lid) : renderQuizMenu();
   });
   view().querySelectorAll('.choice').forEach((b) => b.addEventListener('click', () => answer(q, Number(b.dataset.i))));
@@ -384,7 +387,7 @@ function renderQuizResult() {
   }
   view().innerHTML = `
   <section class="card center">
-    <div class="muted small">${lesson ? LESSONS.find((l) => l.id === lesson).title : cat === 'all' ? 'すべての分野' : catName(cat)}</div>
+    <div class="muted small">${lesson ? LESSONS.find((l) => l.id === lesson).title : quiz.title || (cat === 'all' ? 'すべての分野' : catName(cat))}</div>
     <div class="score">${ok} / ${n}</div>
     <div class="muted">正答率 ${Math.round(ok / n * 100)}%（合格ライン 60%）</div>
     <div class="btns center">
@@ -395,7 +398,8 @@ function renderQuizResult() {
     </div>
   </section>
   ${wrong.length ? `<section class="card"><h2>間違えた問題</h2>${wrong.map((q) => `<div class="review"><div>${q.q}</div><p class="ans">正解：${q.c[q.a]}</p><p class="muted small">${q.e}</p></div>`).join('')}</section>` : ''}`;
-  $('#again')?.addEventListener('click', () => startQuiz(cat, mode));
+  $('#again')?.addEventListener('click', () => (mode === 'theme' ? startList(quiz.list.map((q) => q.id), quiz.title) : startQuiz(cat, mode)));
+  if (mode === 'theme') $('#menu').setAttribute('href', '#stats');
   $('#menu').addEventListener('click', () => { quiz = null; });
   if (wrong.length) $('#retryWrong').addEventListener('click', () => { quiz = { cat, mode, lesson: null, list: shuffle([...wrong]), i: 0, results: [] }; renderQuestion(); });
   view().querySelectorAll('.review').forEach(linkTerms);
@@ -450,6 +454,106 @@ function newCalc() {
   }));
 }
 
+// ===== 大問別の到達度 =====
+// テーマの習得度：そのテーマの問題のうち「前回正解」の割合
+function themeMastery(t) {
+  const ok = t.qids.filter((id) => state.records[id] && state.records[id].last === 1).length;
+  const tried = t.qids.filter((id) => state.records[id]).length;
+  return { ok, tried, n: t.qids.length, m: t.qids.length ? ok / t.qids.length : 0 };
+}
+// 大問のカバー率：出題頻度で重み付けした習得度
+function partCoverage(p) {
+  const total = p.themes.reduce((s, t) => s + t.freq, 0);
+  return p.themes.reduce((s, t) => s + t.freq * themeMastery(t).m, 0) / total;
+}
+// 頻出テーマ（★）だけで過去の出題の何割を占めるか
+function frequentShare(p) {
+  const total = p.themes.reduce((s, t) => s + t.freq, 0);
+  return p.themes.filter((t) => t.freq >= FREQUENT).reduce((s, t) => s + t.freq, 0) / total;
+}
+function partStatus(cov) {
+  if (cov >= 0.8) return { cls: 'ok', label: '仕上がり' };
+  if (cov >= 0.6) return { cls: 'mid', label: '合格ライン付近' };
+  if (cov > 0) return { cls: 'low', label: '学習中' };
+  return { cls: 'none', label: '未着手' };
+}
+const estScore = () => EXAM_PARTS.reduce((s, p) => s + p.points * partCoverage(p), 0);
+
+function openPart() { try { return sessionStorage.getItem('openPart'); } catch { return null; } }
+
+function partsSummaryCard() {
+  const est = Math.round(estScore());
+  return `<section class="card">
+    <h2>大問別の到達度</h2>
+    <div class="parts-mini">${EXAM_PARTS.map((p) => {
+      const c = partCoverage(p);
+      return `<a href="#stats" class="pm"><span class="pm-no">問${p.no}</span><span class="meter"><span class="${partStatus(c).cls}" style="width:${Math.round(c * 100)}%"></span></span><span class="pm-v">${Math.round(c * 100)}%</span></a>`;
+    }).join('')}</div>
+    <p class="small">推定 <b>${est}</b> / 150 点（合格 90 点）<span class="muted">　※このアプリの問題の正答状況からの目安</span></p>
+    <a class="btn" href="#stats">テーマ別に見る</a>
+  </section>`;
+}
+
+function partsDetail() {
+  const est = Math.round(estScore());
+  return `<section class="card">
+    <h2>大問別の到達度</h2>
+    <p class="small">各大問のテーマと、直近 ${EXAM_ROUNDS} 回（令和3年度〜令和8年度第1回）で出題された回数です。<b>★ のテーマ（${EXAM_ROUNDS} 回中 ${FREQUENT} 回以上）をすべて「クリア」</b>（そのテーマの問題を 8 割以上正解）すれば、その大問の過去出題の大部分をカバーできます。</p>
+    <div class="est"><span>推定</span><b>${est}</b><span>/ 150 点</span><span class="muted small">合格 90 点</span></div>
+    <p class="muted small">推定点 ＝ 各大問の配点 × カバー率（出題回数で重み付けした正答状況）。アプリの問題での目安で、本番の点数を保証するものではありません。</p>
+  </section>
+  ${EXAM_PARTS.map((p) => {
+    const c = partCoverage(p);
+    const st = partStatus(c);
+    const freqThemes = p.themes.filter((t) => t.freq >= FREQUENT);
+    const cleared = freqThemes.filter((t) => themeMastery(t).m >= 0.8).length;
+    return `<details class="card part" ${openPart() == p.no ? 'open' : ''} data-part="${p.no}">
+      <summary>
+        <div class="part-head"><b>問${p.no} ${p.title}</b><span class="muted small">${p.points}点</span></div>
+        <div class="part-bar"><span class="meter big"><span class="${st.cls}" style="width:${Math.round(c * 100)}%"></span></span><span class="pill ${st.cls}">${st.label} ${Math.round(c * 100)}%</span></div>
+        <div class="muted small">★ 頻出テーマ ${cleared}/${freqThemes.length} クリア ・ ★だけで過去出題の約 ${Math.round(frequentShare(p) * 100)}%</div>
+      </summary>
+      <div class="goal">🎯 <b>目標</b>：★ の ${freqThemes.length} テーマをクリア${freqThemes.length < p.themes.length ? '。余裕があれば残りのテーマも' : ''}</div>
+      ${p.themes.map((t, ti) => {
+        const m = themeMastery(t);
+        const done = m.m >= 0.8;
+        return `<div class="theme ${done ? 'done' : ''}">
+          <div class="theme-head"><span class="star">${t.freq >= FREQUENT ? '★' : '　'}</span><span class="tn">${t.name}</span>${done ? '<span class="pill ok">クリア</span>' : ''}</div>
+          <div class="theme-meta"><span class="freq" title="出題回数"><span class="dots">${'●'.repeat(t.freq)}${'○'.repeat(EXAM_ROUNDS - t.freq)}</span> ${EXAM_ROUNDS}回中${t.freq}回</span></div>
+          <div class="theme-prog"><span class="meter"><span class="${done ? 'ok' : m.m > 0 ? 'mid' : 'none'}" style="width:${Math.round(m.m * 100)}%"></span></span><span class="muted small">${m.ok}/${m.n}問 正解</span></div>
+          <div class="theme-btns">
+            <button class="btn sm primary" data-theme="${p.no}-${ti}">解く</button>
+            ${t.lessons.map((id) => `<a class="btn sm" href="#lesson/${id}">${id}</a>`).join('')}
+            ${t.calc ? `<button class="btn sm" data-calc="${t.calc[0]}">計算ドリル</button>` : ''}
+          </div>
+          ${t.qids.length <= 2 ? '<div class="muted small thin">※アプリの問題が少ないテーマです。過去問でも確認してください</div>' : ''}
+        </div>`;
+      }).join('')}
+    </details>`;
+  }).join('')}`;
+}
+
+function bindParts() {
+  view().querySelectorAll('[data-theme]').forEach((b) => b.addEventListener('click', () => {
+    const [pn, ti] = b.dataset.theme.split('-').map(Number);
+    const p = EXAM_PARTS.find((x) => x.no === pn);
+    try { sessionStorage.setItem('openPart', pn); } catch { /* noop */ }
+    startList(p.themes[ti].qids, `問${pn} ${p.themes[ti].name}`);
+  }));
+  view().querySelectorAll('[data-calc]').forEach((b) => b.addEventListener('click', () => { calcSel = b.dataset.calc; location.hash = '#calc'; }));
+  view().querySelectorAll('details.part').forEach((d) => d.addEventListener('toggle', () => {
+    try { if (d.open) sessionStorage.setItem('openPart', d.dataset.part); } catch { /* noop */ }
+  }));
+}
+
+function startList(ids, title) {
+  const list = shuffle(ids.map(qById).filter(Boolean));
+  quiz = { cat: 'all', mode: 'theme', title, list, i: 0, results: [] };
+  if (location.hash !== '#quiz') history.replaceState(null, '', '#quiz');
+  document.querySelectorAll('.nav a').forEach((a) => a.classList.toggle('active', a.dataset.r === 'stats'));
+  renderQuestion();
+}
+
 // ===== 記録 =====
 function renderStats() {
   const days = [];
@@ -461,7 +565,8 @@ function renderStats() {
   let streak = 0;
   for (let k = days.length - 1; k >= 0; k--) { if (days[k].n > 0) streak++; else if (k !== days.length - 1) break; }
 
-  view().innerHTML = `<h1 class="page-title">学習記録</h1>
+  view().innerHTML = `<h1 class="page-title">到達度と記録</h1>
+  ${partsDetail()}
   <section class="card">
     <h2>直近14日の解答数</h2>
     <p class="muted small">連続学習 ${streak} 日</p>
@@ -488,6 +593,7 @@ function renderStats() {
       <button class="btn danger" id="reset">記録をリセット</button>
     </div>
   </section>`;
+  bindParts();
   $('#exp').addEventListener('click', async () => {
     const txt = JSON.stringify(state);
     try { await navigator.clipboard.writeText(txt); toast('コピーしました'); } catch { prompt('この文字列を保存してください', txt); }

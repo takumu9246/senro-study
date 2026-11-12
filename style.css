@@ -264,3 +264,40 @@ input[type=search] {
   border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text);
 }
 .review > div { margin: .2rem 0; }
+
+/* ===== 大問別の到達度 ===== */
+.meter > span { display: block; height: 100%; border-radius: 99px; }
+.meter .ok { background: var(--ok); }
+.meter .mid { background: #e0a100; }
+.meter .low { background: var(--accent); }
+.meter .none { background: transparent; }
+.meter.big { height: 12px; flex: 1; margin: 0; }
+.parts-mini { display: grid; gap: 6px; margin-bottom: 10px; }
+.pm { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text); }
+.pm-no { width: 2.6em; font-size: .85rem; font-weight: 600; }
+.pm .meter { flex: 1; margin: 0; }
+.pm-v { width: 3em; text-align: right; font-size: .8rem; color: var(--muted); }
+.est { display: flex; align-items: baseline; gap: 6px; margin: 8px 0 4px; }
+.est b { font-size: 2.2rem; color: var(--accent); }
+.part summary { list-style: none; cursor: pointer; }
+.part summary::-webkit-details-marker { display: none; }
+.part-head { display: flex; justify-content: space-between; gap: 8px; }
+.part-bar { display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; }
+.pill { font-size: .72rem; padding: 2px 8px; border-radius: 99px; white-space: nowrap; background: var(--line); color: var(--muted); }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.mid { background: #fff1d6; color: #8a5a00; }
+.pill.low { background: var(--accent-soft); color: var(--accent); }
+@media (prefers-color-scheme: dark) { .pill.mid { background: #3d2f12; color: #f2c46d; } }
+.goal { background: var(--accent-soft); border-radius: 8px; padding: 8px 10px; margin: 12px 0 4px; font-size: .9rem; }
+.theme { border-top: 1px solid var(--line); padding: 10px 0; }
+.theme-head { display: flex; gap: 4px; align-items: flex-start; font-size: .93rem; font-weight: 600; }
+.theme-head .tn { flex: 1; }
+.theme.done .tn { color: var(--muted); }
+.star { color: #e0a100; width: 1.2em; flex: none; }
+.theme-meta { margin: 2px 0 0 1.2em; font-size: .78rem; color: var(--muted); }
+.dots { letter-spacing: -1px; color: #e0a100; font-size: .7rem; }
+.theme-prog { display: flex; align-items: center; gap: 8px; margin: 4px 0 6px 1.2em; }
+.theme-prog .meter { flex: 1; margin: 0; }
+.theme-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-left: 1.2em; }
+.btn.sm { min-height: 34px; padding: 5px 12px; font-size: .82rem; }
+.thin { margin: 4px 0 0 1.2em; }
