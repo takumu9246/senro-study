@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>線路設備 学習帳</title>
+<meta name="description" content="電気通信主任技術者「線路設備及び設備管理」の学習用Webアプリ">
+<meta name="theme-color" content="#1f5f8b">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="線路学習">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top"><a href="#home">線路設備 学習帳</a><span class="sub">電気通信主任技術者・線路設備及び設備管理</span></header>
+<main id="view"></main>
+<nav class="nav">
+  <a href="#home" data-r="home"><span class="i">🏠</span>ホーム</a>
+  <a href="#notes" data-r="notes"><span class="i">📘</span>要点</a>
+  <a href="#quiz" data-r="quiz"><span class="i">✏️</span>問題</a>
+  <a href="#calc" data-r="calc"><span class="i">🧮</span>計算</a>
+  <a href="#stats" data-r="stats"><span class="i">📊</span>記録</a>
+</nav>
+<div id="toast" role="status"></div>
+<script src="js/questions.js"></script>
+<script src="js/notes.js"></script>
+<script src="js/plan.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
