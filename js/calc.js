@@ -280,3 +280,99 @@ function fixNeg(ans, wrongs, d = 1) {
   const list = shuffle([...set]);
   return { choices: list, answer: list.indexOf(s(ans)) };
 }
+
+// ===== 過去問で頻出の計算（★） =====
+CALC_TYPES.forEach((t) => { if (['avail', 'sysavail', 'rel', 'cpath', 'refl'].includes(t.id)) t.past = true; });
+CALC_TYPES.push(
+  {
+    id: 'pull', name: '管路の張力', past: true,
+    gen() {
+      const T0 = pick([500, 600, 800, 1000, 1200]);
+      const W = pick([0.4, 0.5, 0.6, 0.8, 1.0]);
+      const L = pick([40, 50, 60, 80, 95, 100]);
+      const mu = pick([0.1, 0.2, 0.3, 0.5]);
+      const g = 10;
+      if (Math.random() < 0.5) {
+        const T = T0 + mu * W * g * L;
+        return {
+          q: `水平で直線の管路区間（長さ ${L} m）に光ファイバケーブルを布設する。入口直前の張力 ${T0} N、ケーブル質量 ${W} kg/m、摩擦係数 ${mu}、重力加速度 10 m/s² のとき、出口での張力は何 N か（整数に四捨五入）。`,
+          ...makeChoices(T, [mu * W * g * L, T0 + W * g * L, T0 * Math.exp(mu), T0 + mu * W * L], 0, ' N'),
+          steps: `水平・直線では摩擦力の分だけ増える。<br>T = T₀ + μWgL = ${T0} + ${mu} × ${W} × 10 × ${L} = ${T0} + ${fmt(mu * W * g * L, 1)} = <b>${fmt(T, 0)} N</b>`,
+        };
+      }
+      const th = pick([[10, 0.98, 0.17], [15, 0.97, 0.26], [20, 0.94, 0.34], [30, 0.87, 0.5]]);
+      const T = T0 + W * g * L * (mu * th[1] + th[2]);
+      return {
+        q: `傾斜角 ${th[0]} 度の上り坂の区間（長さ ${L} m）でケーブルを上方へ牽引する。下端直前の張力 ${T0} N、ケーブル質量 ${W} kg/m、摩擦係数 ${mu}、重力加速度 10 m/s²、cos${th[0]}° = ${th[1]}、sin${th[0]}° = ${th[2]} のとき、上端での張力は何 N か（整数に四捨五入）。`,
+        ...makeChoices(T, [T0 + W * g * L * (mu * th[1] - th[2]), T0 + W * g * L * (mu * th[2] + th[1]), T0 + mu * W * g * L, T0 + W * g * L * th[2]], 0, ' N'),
+        steps: `上り坂では「摩擦力（μ × 重さの斜面に垂直な成分）」＋「重さの斜面方向の成分」が加わる。<br>T = T₀ + WgL(μcosθ + sinθ)<br>= ${T0} + ${W} × 10 × ${L} × (${mu} × ${th[1]} + ${th[2]})<br>= ${T0} + ${fmt(W * g * L, 0)} × ${fmt(mu * th[1] + th[2], 3)} = <b>${fmt(T, 0)} N</b><br><small>下り坂なら sinθ の符号がマイナスになる。</small>`,
+      };
+    },
+  },
+  {
+    id: 'sagT', name: '弛度から張力', past: true,
+    gen() {
+      const W = pick([0.3, 0.4, 0.5, 0.8, 1.2]);
+      const S = pick([30, 40, 50, 60]);
+      const d = pick([0.2, 0.3, 0.4, 0.5, 0.6]);
+      const T = W * S * S / (8 * d);
+      return {
+        q: `高低差のない電柱間（スパン長 ${S} m）に、単位長さ当たり荷重 ${W} N/m の架空ケーブルを弛度 ${d} m で架設した。支持点の水平張力 T は何 N か（整数に四捨五入）。`,
+        ...makeChoices(T, [W * S * S / (4 * d), W * S / (8 * d), W * S * S / (2 * d), T / 2], 0, ' N'),
+        steps: `弛度の式 d = WS²/(8T) を T について解く。<br>T = WS²/(8d) = ${W} × ${S}² / (8 × ${d}) = ${fmt(W * S * S, 1)} / ${fmt(8 * d, 1)} ≈ <b>${fmt(T, 0)} N</b>`,
+      };
+    },
+  },
+  {
+    id: 'mttr', name: '許容 MTTR', past: true,
+    gen() {
+      const lam = pick([0.5, 1, 2, 4, 5]);
+      const A = pick([0.9, 0.95, 0.98, 0.99]);
+      const mtbf = 100 / lam;
+      const mttr = mtbf * (1 - A) / A;
+      return {
+        q: `故障率が ${lam} %/時間の装置で、固有アベイラビリティを ${A * 100} % より大きくするには、MTTR は何時間を超えてはならないか（小数第 1 位まで）。`,
+        ...makeChoices(mttr, [mtbf * (1 - A), mtbf / A, mtbf * A / (1 - A) / 100, mttr * 2], 1, ' 時間'),
+        steps: `MTBF = 1/λ = 1/${lam / 100} = ${fmt(mtbf, 1)} 時間<br>A = MTBF/(MTBF + MTTR) > ${A} より<br>MTTR < MTBF × (1 − A)/A = ${fmt(mtbf, 1)} × ${fmt(1 - A, 2)}/${A} ≈ <b>${fmt(mttr, 1)} 時間</b>`,
+      };
+    },
+  },
+  {
+    id: 'avdata', name: '稼働データ', past: true,
+    gen() {
+      const k = pick([5, 8, 10, 12, 20]);
+      const mtbf = pick([100, 150, 200, 250, 500]);
+      const mttr = pick([5, 10, 20, 25, 50]);
+      const up = k * mtbf, down = k * mttr;
+      const A = up / (up + down);
+      const t = pick([0.2, 0.4, 1]) * mtbf;
+      const e = { 0.2: 1.22, 0.4: 1.49, 1: 2.72 }[t / mtbf];
+      const R = 1 / e;
+      if (Math.random() < 0.5) {
+        return {
+          q: `ある装置の稼働状況を調べたところ、故障 ${k} 回、動作時間の合計 ${up.toLocaleString()} 時間、修理による休止時間の合計 ${down.toLocaleString()} 時間であった。固有アベイラビリティは何 % か（整数に四捨五入）。`,
+          ...makeChoices(A * 100, [down / up * 100, (1 - down / up) * 100 - 3, up / (up + down / k) * 100], 0, ' %'),
+          steps: `MTBF = ${up.toLocaleString()} / ${k} = ${mtbf} h、MTTR = ${down.toLocaleString()} / ${k} = ${mttr} h<br>A = MTBF/(MTBF+MTTR) = ${mtbf}/${mtbf + mttr} ≈ <b>${fmt(A * 100, 0)} %</b>`,
+        };
+      }
+      return {
+        q: `ある装置で故障 ${k} 回、動作時間の合計 ${up.toLocaleString()} 時間であった。偶発故障期間にあるとして、稼働開始後 ${t} 時間経過時点の信頼度は何 % か。ただし e^${fmt(t / mtbf, 1)} = ${e} とし、整数に四捨五入する。`,
+        ...makeChoices(R * 100, [(1 - R) * 100, e * 10, 100 - t / mtbf * 100 + 5], 0, ' %'),
+        steps: `MTBF = ${up.toLocaleString()} / ${k} = ${mtbf} h、λ = 1/${mtbf}<br>R = e^(−λt) = e^(−${t}/${mtbf}) = 1 / e^${fmt(t / mtbf, 1)} = 1/${e} ≈ <b>${fmt(R * 100, 0)} %</b>`,
+      };
+    },
+  },
+  {
+    id: 'irefl', name: '電流反射係数', past: true,
+    gen() {
+      const z0 = pick([100, 200, 300, 400, 600]);
+      const z1 = pick([z0 / 4, z0 / 2, z0 * 1.5, z0 * 2, z0 * 3].map(Math.round));
+      const gv = (z1 - z0) / (z1 + z0);
+      return {
+        q: `特性インピーダンス ${z0} Ω の一様線路をインピーダンス ${z1} Ω で終端した。接続点における<b>電流</b>反射係数はいくらか（小数第 2 位まで）。`,
+        ...fixNeg(-gv, [gv, 2 * z0 / (z1 + z0), 2 * z1 / (z1 + z0), -2 * gv], 2),
+        steps: `電圧反射係数 = (Z₁ − Z₀)/(Z₁ + Z₀) = (${z1} − ${z0})/(${z1} + ${z0}) = ${fmt(gv, 2)}<br>電流反射係数は電圧反射係数の<b>符号を反転</b>したもの → <b>${fmt(-gv, 2)}</b>`,
+      };
+    },
+  },
+);
